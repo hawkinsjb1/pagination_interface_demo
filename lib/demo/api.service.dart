@@ -1,28 +1,30 @@
 const page_size = 20;
 
+// api mockup, nothing to look at here
 class ApiService {
-  static Future<List<Country>> loadCountries(int pageNumber) async {
+  static Future<List<Country>> loadCountries(
+      int pageNumber, bool ascending, String text) async {
     return await Future.delayed(Duration(seconds: 1), () {
       var data = countries
-          .getRange(page_size * (pageNumber - 1), (page_size * pageNumber))
-          .map((e) => Country.fromJson(e))
+          .where((c) => Country.fromJson(c).name.toLowerCase().startsWith(text))
           .toList();
-      data.sort((a, b) => a.name.compareTo(b.name));
-      return data;
-    });
-  }
 
-  static Future<List<Country>> searchCountries(
-      String text, int pageNumber) async {
-    return await Future.delayed(Duration(seconds: 1), () {
-      var data = countries
-          .where((c) => c['name']!.startsWith(text))
-          .toList()
-          .getRange(page_size * (pageNumber - 1), (page_size * pageNumber))
-          .map((e) => Country.fromJson(e))
-          .toList();
-      data.sort((a, b) => a.name.compareTo(b.name));
-      return data;
+      var start, end;
+
+      // none left
+      if (data.length < page_size * (pageNumber - 1)) return [];
+
+      if (data.length > page_size * pageNumber) {
+        start = page_size * (pageNumber - 1);
+        end = start + page_size;
+      } else {
+        start = page_size * (pageNumber - 1);
+        end = data.length;
+      }
+      var results =
+          data.getRange(start, end).map((e) => Country.fromJson(e)).toList();
+      results.sort((a, b) => a.name.compareTo(b.name));
+      return results;
     });
   }
 }

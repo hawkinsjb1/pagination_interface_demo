@@ -5,9 +5,9 @@ class Paged<T> {
   final StreamController<Paged<T>> notifier = StreamController<Paged<T>>();
 
   // the dynamic function to pass page # to
-  Function(int) load;
+  Function(int)? load;
 
-  Paged(this.load);
+  Paged({this.load});
 
   List<T> items = [];
 
@@ -28,13 +28,14 @@ class Paged<T> {
 
   // load next page (defaults to 1st)
   void next() async {
+    if (load == null) throw "Load function not defined";
     if (!hasMore || paging) return;
     page += 1;
 
     paging = true;
     notifier.add(this);
 
-    var nextItems = await this.load(this.page);
+    var nextItems = await load!(page);
     hasMore = !(nextItems == null || nextItems.isEmpty);
     items.addAll(nextItems);
 
@@ -43,13 +44,14 @@ class Paged<T> {
   }
 
   // remove items in list => load data (will likely show spinner in UI)
-  void reload() => {this.clear(), this.next()};
+  void reload() => {clear(), next()};
 
   // load data => set items in list (will avoid showing spinner in UI)
   void refresh() async {
+    if (load == null) throw "Load function not defined";
     page = 1;
 
-    var nextItems = await this.load(this.page);
+    var nextItems = await load!(page);
     hasMore = !(nextItems == null || nextItems.isEmpty);
     items = nextItems;
 
@@ -61,4 +63,6 @@ class Paged<T> {
   }
 
   void clear() => {items.clear(), page = 0, paging = false, hasMore = true};
+
+  void dipose() => notifier.close();
 }

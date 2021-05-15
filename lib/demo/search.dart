@@ -1,29 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:pagination_interface_demo/demo/api.service.dart';
-import 'package:pagination_interface_demo/paged.dart';
+import 'package:pagination_interface_demo/demo/bloc.dart';
 
-class SearchState {
-  final Paged<Country>? pagedCountries;
-  final String searchText;
-  SearchState({required this.pagedCountries, this.searchText = ""});
-  SearchState copyWith({Paged<Country>? pagedCountries, String? searchText}) {
-    return SearchState(
-      pagedCountries: pagedCountries ?? this.pagedCountries,
-      searchText: searchText ?? this.searchText,
-    );
+class SearchDelegatePagination extends SearchDelegate {
+  BlocPagination bloc = BlocPagination();
+  final ScrollController _scrollController = ScrollController();
+
+  SearchDelegatePagination() {
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >
+          _scrollController.position.maxScrollExtent * .9)
+        bloc.state.pagedCountries.next();
+    });
   }
-}
-
-class SearchBloc extends Cubit<SearchState> {
-  SearchBloc() : super(SearchState()) {
-    state.pagedCountries?.load =
-        (i) => ApiService.searchCountries(state.searchText, i);
-  }
-}
-
-class CustomSearchDelegate extends SearchDelegate {
-  Paged<Country> pagedCountries = Paged((i) => ApiService.loadCountries(i));
 
   @override
   List<Widget> buildActions(BuildContext context) {
@@ -42,17 +31,44 @@ class CustomSearchDelegate extends SearchDelegate {
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    if (query != bloc.state.query) {
+    if (query != bloc.state.searchText) {
       bloc.search(query);
     }
     return content();
   }
 
   content() {
-    return pagedCountries.items.map(
-      (e) => ListTile(
-        title: Text(e.name),
-        subtitle: Text(e.code),
+    return BlocBuilder<BlocPagination, BlocPaginationState>(
+        bloc: bloc,
+        builder: (context, state) {
+          return Column(
+            children: [
+              (state.pagedCountries.loadingInitial)
+                  ? _buildProgressIndicator()
+                  : Expanded(
+                      child: ListView(
+                        // use ListView.builder in production app
+                        controller: _scrollController,
+                        children: [
+                          ...state.pagedCountries.items
+                              .map((country) =>
+                                  ListTile(title: Text(country.name)))
+                              .toList(),
+                          if (state.pagedCountries.loadingMore)
+                            _buildProgressIndicator(),
+                        ],
+                      ),
+                    ),
+            ],
+          );
+        });
+  }
+
+  _buildProgressIndicator() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16.0),
+        child: CircularProgressIndicator(),
       ),
     );
   }
