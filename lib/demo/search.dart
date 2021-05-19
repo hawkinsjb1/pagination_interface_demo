@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:pagination_interface_demo/demo/bloc.dart';
+import 'package:pagination_interface_demo/demo/api.service.dart';
+import 'package:pagination_interface_demo/paged.dart';
 
 class SearchDelegatePagination extends SearchDelegate {
-  BlocPagination bloc = BlocPagination();
+  late Paged<Country> searchedCountries;
   final ScrollController _scrollController = ScrollController();
 
   SearchDelegatePagination() {
+    searchedCountries =
+        Paged(load: (i) => ApiService.loadCountries(i, true, query));
+
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >
           _scrollController.position.maxScrollExtent * .9)
-        bloc.state.pagedCountries.next();
+        searchedCountries.next();
     });
   }
 
@@ -26,42 +29,41 @@ class SearchDelegatePagination extends SearchDelegate {
 
   @override
   Widget buildResults(BuildContext context) {
-    return content();
+    return content(query);
   }
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    if (query != bloc.state.searchText) {
-      bloc.search(query);
-    }
-    return content();
+    return content(query);
   }
 
-  content() {
-    return BlocBuilder<BlocPagination, BlocPaginationState>(
-        bloc: bloc,
-        builder: (context, state) {
-          return Column(
-            children: [
-              (state.pagedCountries.loadingInitial)
-                  ? _buildProgressIndicator()
-                  : Expanded(
-                      child: ListView(
-                        // use ListView.builder in production app
-                        controller: _scrollController,
-                        children: [
-                          ...state.pagedCountries.items
-                              .map((country) =>
-                                  ListTile(title: Text(country.name)))
-                              .toList(),
-                          if (state.pagedCountries.loadingMore)
-                            _buildProgressIndicator(),
-                        ],
-                      ),
+  content(query) {
+    searchedCountries.reload();
+    return StreamBuilder(
+      stream: searchedCountries.notifier.stream,
+      builder: (context, snapshot) {
+        return Column(
+          children: [
+            (searchedCountries.loadingInitial)
+                ? _buildProgressIndicator()
+                : Expanded(
+                    child: ListView(
+                      // use ListView.builder in production app
+                      controller: _scrollController,
+                      children: [
+                        ...searchedCountries.items
+                            .map((country) =>
+                                ListTile(title: Text(country.name)))
+                            .toList(),
+                        if (searchedCountries.loadingMore)
+                          _buildProgressIndicator(),
+                      ],
                     ),
-            ],
-          );
-        });
+                  ),
+          ],
+        );
+      },
+    );
   }
 
   _buildProgressIndicator() {
