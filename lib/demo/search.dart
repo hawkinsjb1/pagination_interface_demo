@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:pagination_interface_demo/demo/api.service.dart';
 import 'package:pagination_interface_demo/paged.dart';
@@ -5,10 +7,11 @@ import 'package:pagination_interface_demo/paged.dart';
 class SearchDelegatePagination extends SearchDelegate {
   late Paged<Country> searchedCountries;
   final ScrollController _scrollController = ScrollController();
+  final _debounce = Debouncer();
 
   SearchDelegatePagination() {
     searchedCountries =
-        Paged(load: (i) => ApiService.loadCountries(i, true, query));
+        Paged(load: (page) => ApiService.loadCountries(page, true, query));
 
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >
@@ -34,18 +37,26 @@ class SearchDelegatePagination extends SearchDelegate {
 
   @override
   Widget buildSuggestions(BuildContext context) {
+    _debounce.run(() async => searchedCountries.reload());
     return content(query);
   }
 
   content(query) {
-    searchedCountries.reload();
     return StreamBuilder(
       stream: searchedCountries.notifier.stream,
       builder: (context, snapshot) {
         return Column(
           children: [
             (searchedCountries.loadingInitial)
-                ? _buildProgressIndicator()
+                ? Container(
+                    width: double.infinity,
+                    child: Column(
+                      children: [
+                        _buildProgressIndicator(),
+                        Text('Searching Countries...')
+                      ],
+                    ),
+                  )
                 : Expanded(
                     child: ListView(
                       // use ListView.builder in production app
@@ -70,8 +81,24 @@ class SearchDelegatePagination extends SearchDelegate {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 16.0),
-        child: CircularProgressIndicator(),
+        child: CircularProgressIndicator(
+          color: Colors.grey,
+        ),
       ),
     );
+  }
+}
+
+class Debouncer {
+  final int milliseconds;
+  Timer? _timer;
+  Debouncer({this.milliseconds = 500});
+  run(VoidCallback action) {
+    if (_timer != null) {
+      _timer!.cancel();
+    } else {
+      action();
+    }
+    _timer = Timer(Duration(milliseconds: milliseconds), action);
   }
 }

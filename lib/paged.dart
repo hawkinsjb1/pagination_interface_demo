@@ -2,44 +2,44 @@ import 'dart:async';
 
 class Paged<T> {
   // primarily needed for calling setState/emit upon state changes
-  final StreamController<Paged<T>> notifier = StreamController<Paged<T>>();
+  final StreamController<Paged<T>> notifier =
+      StreamController<Paged<T>>.broadcast();
 
   // the dynamic function to pass page # to
   Function(int)? load;
 
   Paged({this.load});
 
-  List<T> items = [];
-
   // useful for refresh indicators
   Completer refreshCompleter = Completer();
-
-  // internal values
-  bool hasMore = true;
-  bool paging = false;
+  List<T> items = [];
   int page = 0;
 
+  // internal values
+  bool _hasMore = true;
+  bool _paging = false;
+
   // various states built from internal values
-  bool get loading => paging;
-  bool get loadingInitial => paging && items.isEmpty;
-  bool get loadingMore => paging && items.isNotEmpty;
-  bool get loadedAll => !hasMore;
-  bool get noData => !hasMore && items.isEmpty;
+  bool get loading => _paging;
+  bool get loadingInitial => _paging && page == 1 && items.isEmpty;
+  bool get refreshing => _paging && page == 1 && items.isNotEmpty;
+  bool get loadingMore => _paging && page > 1;
+  bool get loadedAll => !_hasMore;
+  bool get noData => !_hasMore && items.isEmpty;
 
   // load next page (defaults to 1st)
   void next() async {
-    if (load == null) throw "Load function not defined";
-    if (!hasMore || paging) return;
-    page += 1;
+    if (load == null || !_hasMore || _paging) return;
 
-    paging = true;
+    page += 1;
+    _paging = true;
     notifier.add(this);
 
     var nextItems = await load!(page);
-    hasMore = !(nextItems == null || nextItems.isEmpty);
+    _hasMore = !(nextItems == null || nextItems.isEmpty);
     items.addAll(nextItems);
 
-    paging = false;
+    _paging = false;
     notifier.add(this);
   }
 
@@ -48,21 +48,23 @@ class Paged<T> {
 
   // load data => set items in list (will avoid showing spinner in UI)
   void refresh() async {
-    if (load == null) throw "Load function not defined";
+    if (load == null) return;
+
     page = 1;
+    _paging = true;
+    notifier.add(this);
 
     var nextItems = await load!(page);
-    hasMore = !(nextItems == null || nextItems.isEmpty);
+    _hasMore = !(nextItems == null || nextItems.isEmpty);
     items = nextItems;
 
-    paging = false;
+    _paging = false;
     refreshCompleter.complete();
     refreshCompleter = Completer();
-
     notifier.add(this);
   }
 
-  void clear() => {items.clear(), page = 0, paging = false, hasMore = true};
+  void clear() => {items.clear(), page = 0, _paging = false, _hasMore = true};
 
   void dipose() => notifier.close();
 }
