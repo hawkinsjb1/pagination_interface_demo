@@ -30,7 +30,6 @@ class BlocPagination extends Cubit<BlocPaginationState> {
     state.pagedCountries.next();
   }
 
-  // 'reload()' will empty items prior to load because they are outdated once sort has changed
   setSortDirection(bool x) =>
       {emit(state.copyWith(ascending: x)), state.pagedCountries.reload()};
 }

@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:pagination_interface_demo/demo/bloc.dart';
 import 'package:pagination_interface_demo/demo/search.dart';
 
-// add completer to pagination model
 class ScreenPagination extends StatefulWidget {
   @override
   _ScreenPaginationState createState() => _ScreenPaginationState();
@@ -15,6 +14,7 @@ class _ScreenPaginationState extends State<ScreenPagination> {
 
   @override
   void initState() {
+    // scroll view detection
     _scrollController.addListener(() {
       if (_scrollController.position.pixels >
           _scrollController.position.maxScrollExtent * .9)
@@ -31,11 +31,7 @@ class _ScreenPaginationState extends State<ScreenPagination> {
         return Scaffold(
           appBar: _buildAppBar(),
           body: RefreshIndicator(
-            onRefresh: () {
-              // 'refresh()' will keep loaded items in view until fetch is finished
-              state.pagedCountries.refresh();
-              return state.pagedCountries.refreshCompleter.future;
-            },
+            onRefresh: () => state.pagedCountries.refresh(),
             child: Column(
               children: [
                 Row(
@@ -73,18 +69,29 @@ class _ScreenPaginationState extends State<ScreenPagination> {
                         ),
                       )
                     : Expanded(
-                        child: ListView(
-                          // use ListView.builder in production app
-                          controller: _scrollController,
-                          children: [
-                            ...state.pagedCountries.items
-                                .map((country) =>
-                                    ListTile(title: Text(country.name)))
-                                .toList(),
-                            if (state.pagedCountries.loadingMore)
-                              _buildProgressIndicator(),
-                          ],
-                        ),
+                        child: (state.pagedCountries.failed)
+                            ? Column(
+                                children: [
+                                  Text('Failed'),
+                                  TextButton(
+                                    child: Text('RETRY'),
+                                    onPressed: () =>
+                                        state.pagedCountries.reload(),
+                                  )
+                                ],
+                              )
+                            : ListView(
+                                // use ListView.builder in production app
+                                controller: _scrollController,
+                                children: [
+                                  ...state.pagedCountries.items
+                                      .map((country) =>
+                                          ListTile(title: Text(country.name)))
+                                      .toList(),
+                                  if (state.pagedCountries.loadingMore)
+                                    _buildProgressIndicator(),
+                                ],
+                              ),
                       ),
               ],
             ),
