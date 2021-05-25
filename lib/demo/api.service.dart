@@ -8,7 +8,7 @@ class ApiService {
       var data = countries
           .where((c) => Country.fromJson(c).name.toLowerCase().startsWith(text))
           .toList();
-
+      if (!ascending) data = data.reversed.toList();
       var start, end;
 
       // none left
@@ -23,7 +23,11 @@ class ApiService {
       }
       var results =
           data.getRange(start, end).map((e) => Country.fromJson(e)).toList();
-      results.sort((a, b) => a.name.compareTo(b.name));
+      if (ascending) {
+        results.sort((a, b) => a.name.compareTo(b.name));
+      } else {
+        results.sort((a, b) => b.name.compareTo(a.name));
+      }
       return results;
     });
   }
