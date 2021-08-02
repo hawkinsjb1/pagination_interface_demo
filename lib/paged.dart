@@ -8,7 +8,10 @@ class Paged<T> {
   // the dynamic function to pass page # to
   Function(int)? load;
 
-  Paged({this.load});
+  // used for triggering 'loadedAll' on first run
+  final int? expectedPageSize;
+
+  Paged({this.load, this.expectedPageSize});
 
   List<T> items = [];
   int page = 0;
@@ -38,11 +41,14 @@ class Paged<T> {
       notifier.add(this);
 
       var nextItems = await load!(page);
-      _hasMore = !(nextItems == null || nextItems.isEmpty);
+      _hasMore = !(nextItems == null ||
+          nextItems.isEmpty ||
+          (expectedPageSize != null && nextItems.length < expectedPageSize));
       items.addAll(nextItems);
 
       _paging = false;
     } catch (_) {
+      page -= 1;
       _paging = false;
       _failed = true;
     }
@@ -65,7 +71,9 @@ class Paged<T> {
       notifier.add(this);
 
       var nextItems = await load!(page);
-      _hasMore = !(nextItems == null || nextItems.isEmpty);
+      _hasMore = !(nextItems == null ||
+          nextItems.isEmpty ||
+          (expectedPageSize != null && nextItems.length < expectedPageSize));
       items = nextItems;
 
       _paging = false;

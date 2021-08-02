@@ -1,9 +1,7 @@
-const page_size = 20;
-
 // api mockup, nothing to look at here
 class ApiService {
   static Future<List<Country>> loadCountries(
-      int pageNumber, bool ascending, String text) async {
+      int pageNumber, int pageSize, bool ascending, String text) async {
     return await Future.delayed(Duration(seconds: 1), () {
       var data = countries
           .where((c) => Country.fromJson(c).name.toLowerCase().startsWith(text))
@@ -12,13 +10,13 @@ class ApiService {
       var start, end;
 
       // none left
-      if (data.length < page_size * (pageNumber - 1)) return [];
+      if (data.length < pageSize * (pageNumber - 1)) return [];
 
-      if (data.length > page_size * pageNumber) {
-        start = page_size * (pageNumber - 1);
-        end = start + page_size;
+      if (data.length > pageSize * pageNumber) {
+        start = pageSize * (pageNumber - 1);
+        end = start + pageSize;
       } else {
-        start = page_size * (pageNumber - 1);
+        start = pageSize * (pageNumber - 1);
         end = data.length;
       }
       var results =
