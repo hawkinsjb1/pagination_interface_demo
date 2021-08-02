@@ -8,7 +8,7 @@ class Paged<T> {
   // the dynamic function to pass page # to
   Function(int)? load;
 
-  // used for triggering 'loadedAll' on first run
+  // used for triggering 'loadedAll' without needing an empty response
   final int? expectedPageSize;
 
   Paged({this.load, this.expectedPageSize});
